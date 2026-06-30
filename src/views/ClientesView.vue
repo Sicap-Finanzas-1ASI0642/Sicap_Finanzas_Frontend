@@ -1,19 +1,19 @@
 <template>
   <div>
     <div class="page-header">
-      <h1 class="page-title">Vehículos</h1>
-      <Button label="Nuevo Vehículo" icon="pi pi-plus" @click="abrirFormulario()" />
+      <h1 class="page-title">Clientes</h1>
+      <Button label="Nuevo Cliente" icon="pi pi-plus" @click="abrirFormulario()" />
     </div>
 
     <div class="card">
       <DataTable
-          :value="vehiculos"
+          :value="clientes"
           :loading="loading"
           paginator :rows="10"
           striped-rows
           v-model:filters="filters"
           filter-display="row"
-          :global-filter-fields="['marca', 'modelo', 'condicion']"
+          :global-filter-fields="['nombre', 'apellido', 'dni', 'email']"
       >
         <template #header>
           <div class="table-header">
@@ -25,20 +25,17 @@
         </template>
 
         <Column field="id" header="#" style="width:60px" sortable />
-        <Column field="marca" header="Marca" sortable />
-        <Column field="modelo" header="Modelo" sortable />
-        <Column field="anio" header="Año" sortable />
-        <Column header="Condición">
+        <Column header="Nombre completo" sortable sort-field="nombre">
           <template #body="{ data }">
-            <Tag
-                :value="data.condicion"
-                :severity="data.condicion === 'nuevo' ? 'success' : 'warn'"
-            />
+            {{ data.nombre }} {{ data.apellido }}
           </template>
         </Column>
-        <Column header="Precio base" sortable sort-field="precioBase">
+        <Column field="dni" header="DNI" />
+        <Column field="email" header="Email" />
+        <Column field="telefono" header="Teléfono" />
+        <Column header="Ingreso mensual" sortable sort-field="ingresoMensual">
           <template #body="{ data }">
-            S/ {{ formatMonto(data.precioBase) }}
+            S/ {{ formatMonto(data.ingresoMensual) }}
           </template>
         </Column>
         <Column header="Acciones" style="width:120px">
@@ -50,21 +47,21 @@
           </template>
         </Column>
         <template #empty>
-          <div class="empty-msg">No hay vehículos registrados.</div>
+          <div class="empty-msg">No hay clientes registrados.</div>
         </template>
       </DataTable>
     </div>
 
     <Dialog
         v-model:visible="modalVisible"
-        :header="editando ? 'Editar Vehículo' : 'Nuevo Vehículo'"
+        :header="editando ? 'Editar Cliente' : 'Nuevo Cliente'"
         modal
-        style="width: 480px"
+        style="width: 500px"
     >
-      <VehiculoForm
-          :vehiculo="vehiculoSeleccionado"
+      <ClienteForm
+          :cliente="clienteSeleccionado"
           :loading="guardando"
-          @submit="guardarVehiculo"
+          @submit="guardarCliente"
           @cancel="modalVisible = false"
       />
     </Dialog>
@@ -78,88 +75,87 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import { vehiculoService } from '@/domains/vehiculos/services/vehiculoService'
-import VehiculoForm from '@/domains/vehiculos/components/VehiculoForm.vue'
+import { FilterMatchMode } from '@primevue/core'
+import { clienteService } from '@/domains/clientes/services/clienteService'
+import ClienteForm from '@/domains/clientes/components/ClienteForm.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import Tag from 'primevue/tag'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
-import {FilterMatchMode} from "@primevue/core";
 
 const toast = useToast()
 const confirm = useConfirm()
 
-const vehiculos = ref([])
+const clientes = ref([])
 const loading = ref(false)
 const guardando = ref(false)
 const modalVisible = ref(false)
 const editando = ref(false)
-const vehiculoSeleccionado = ref(null)
+const clienteSeleccionado = ref(null)
 
 const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
 
-onMounted(cargarVehiculos)
+onMounted(cargarClientes)
 
-async function cargarVehiculos() {
+async function cargarClientes() {
   loading.value = true
   try {
-    vehiculos.value = await vehiculoService.listar()
+    clientes.value = await clienteService.listar()
   } finally {
     loading.value = false
   }
 }
 
-function abrirFormulario(v = null) {
-  vehiculoSeleccionado.value = v
-  editando.value = !!v
+function abrirFormulario(cliente = null) {
+  clienteSeleccionado.value = cliente
+  editando.value = !!cliente
   modalVisible.value = true
 }
 
-async function guardarVehiculo(datos) {
+async function guardarCliente(datos) {
   guardando.value = true
   try {
     if (editando.value) {
-      await vehiculoService.actualizar(vehiculoSeleccionado.value.id, datos)
-      toast.add({ severity: 'success', summary: 'Actualizado', detail: 'Vehículo actualizado', life: 3000 })
+      await clienteService.actualizar(clienteSeleccionado.value.id, datos)
+      toast.add({ severity: 'success', summary: 'Actualizado', detail: 'Cliente actualizado correctamente', life: 3000 })
     } else {
-      await vehiculoService.crear(datos)
-      toast.add({ severity: 'success', summary: 'Creado', detail: 'Vehículo registrado', life: 3000 })
+      await clienteService.crear(datos)
+      toast.add({ severity: 'success', summary: 'Creado', detail: 'Cliente registrado correctamente', life: 3000 })
     }
     modalVisible.value = false
-    await cargarVehiculos()
+    await cargarClientes()
   } catch (e) {
-    const msg = e.response?.data?.detail || 'Error al guardar'
+    const msg = e.response?.data?.detail || 'Error al guardar el cliente'
     toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 4000 })
   } finally {
     guardando.value = false
   }
 }
 
-function confirmarEliminar(v) {
+function confirmarEliminar(cliente) {
   confirm.require({
-    message: `¿Eliminar ${v.marca} ${v.modelo} ${v.anio}?`,
+    message: `¿Eliminar a ${cliente.nombre} ${cliente.apellido}?`,
     header: 'Confirmar eliminación',
     icon: 'pi pi-trash',
     rejectLabel: 'Cancelar',
     acceptLabel: 'Eliminar',
     acceptClass: 'p-button-danger',
-    accept: () => eliminarVehiculo(v.id),
+    accept: () => eliminarCliente(cliente.id),
   })
 }
 
-async function eliminarVehiculo(id) {
+async function eliminarCliente(id) {
   try {
-    await vehiculoService.eliminar(id)
-    toast.add({ severity: 'success', summary: 'Eliminado', detail: 'Vehículo eliminado', life: 3000 })
-    await cargarVehiculos()
+    await clienteService.eliminar(id)
+    toast.add({ severity: 'success', summary: 'Eliminado', detail: 'Cliente eliminado', life: 3000 })
+    await cargarClientes()
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar', life: 4000 })
+    toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el cliente', life: 4000 })
   }
 }
 
